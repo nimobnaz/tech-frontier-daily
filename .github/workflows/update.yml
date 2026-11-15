@@ -1,0 +1,96 @@
+# 每天自动抓取，并把“科技前沿日报”发布到 GitHub Pages。
+#
+# 首次使用（只需一次）：
+#   1. 仓库 Settings → Pages → Build and deployment → Source 选 “GitHub Actions”
+#   2. 仓库 Actions → 左侧选 “Update and publish” → Run workflow
+#
+# 说明：
+#   - main 分支只放代码，本工作流不会改动它。
+#   - 累积数据（近 10 天的条目）存放在 data 分支的 store.json 里，每次运行整体覆盖，
+#     所以仓库不会越来越大。删掉 data 分支只会丢失历史累积，下次运行会从头开始。
+#   - 改了 config.py / index.html 之后想立即生效：到 Actions 页手动 Run workflow；
+#     否则等下一次定时运行。
+
+name: Update and publish
+
+on:
+  schedule:
+    # 23:17 UTC = 北京时间次日 07:17。GitHub 的定时触发常有几分钟到几十分钟的延迟，
+    # 避开整点可以少排队。想改时间就改这一行（注意写的是 UTC）。
+    - cron: "17 23 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write   # 把累积数据推送到 data 分支
+  pages: write      # 发布到 GitHub Pages
+  id-token: write   # 发布时的身份校验（deploy-pages 需要）
+
+concurrency:
+  group: update-and-publish
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      # 放在最前面：Pages 还没启用时立刻报错，而不是抓取完才失败
+      - name: Check GitHub Pages settings
+        uses: actions/configure-pages@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Restore accumulated data from the data branch
+        run: |
+          mkdir -p data
+          status=0
+          git ls-remote --exit-code origin refs/heads/data > /dev/null || status=$?
+          if [ "$status" -eq 0 ]; then
+            git fetch --quiet --depth=1 origin refs/heads/data
+            git show FETCH_HEAD:store.json > data/store.json
+            echo "Restored store.json ($(wc -c < data/store.json) bytes)"
+          elif [ "$status" -eq 2 ]; then
+            echo "No data branch yet: starting from scratch"
+          else
+            echo "::error::Could not read the data branch (git ls-remote exit code $status)"
+            exit 1
+          fi
+
+      - name: Fetch feeds and build page data
+        env:
+          TZ: Asia/Shanghai
+        run: python update.py
+
+      # 用一个没有历史的单独提交覆盖 data 分支
+      - name: Save accumulated data to the data branch
+        run: |
+          blob="$(git hash-object -w data/store.json)"
+          tree="$(printf '100644 blob %s\tstore.json\n' "$blob" | git mktree)"
+          commit="$(git -c user.name='github-actions[bot]' \
+                        -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+                        commit-tree "$tree" -m "Accumulated data, $(date -u +'%Y-%m-%d %H:%M UTC')")"
+          git push --quiet --force origin "$commit:refs/heads/data"
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site/data
+          cp index.html _site/
+          cp data/news.js _site/data/
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v5

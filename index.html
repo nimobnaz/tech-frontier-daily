@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>科技前沿日报</title>
+<script>
+  // 尽早确定明暗主题，避免加载时闪一下
+  (function () {
+    var saved = null;
+    try { saved = localStorage.getItem('tf-theme'); } catch (e) {}
+    var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  })();
+</script>
+<style>
+  :root {
+    --bg: #f6f6f3; --panel: #ffffff; --text: #1f2328; --muted: #656d76; --faint: #9199a3;
+    --line: #e6e6e1; --accent: #1f5fd0; --accent-soft: #e9f0ff; --hover: #f1f1ed;
+    --warn-bg: #fff6df; --warn-line: #efcf7a; --warn-text: #7a5200;
+    --c-ai: #4f46e5; --c-chip: #0891b2; --c-robot: #d97706; --c-space: #7c3aed; --c-comm: #0d9488;
+    --c-quantum: #db2777; --c-bio: #16a34a; --c-energy: #ea580c; --c-science: #64748b;
+  }
+  [data-theme="dark"] {
+    --bg: #0e1116; --panel: #161a21; --text: #e4e7ea; --muted: #9aa3ae; --faint: #6c7581;
+    --line: #272c35; --accent: #82a8ff; --accent-soft: #1b2743; --hover: #1d222b;
+    --warn-bg: #2b2413; --warn-line: #5c4a17; --warn-text: #f0cf7e;
+    --c-ai: #8b8cf8; --c-chip: #38bdf8; --c-robot: #fbbf24; --c-space: #a78bfa; --c-comm: #2dd4bf;
+    --c-quantum: #f472b6; --c-bio: #4ade80; --c-energy: #fb923c; --c-science: #94a3b8;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei",
+          "Noto Sans SC", "Helvetica Neue", Arial, sans-serif;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- 页头 ---------- */
+  header.top { padding: 30px 0 14px; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  header.top h1 { margin: 0; font-size: 27px; line-height: 1.2; letter-spacing: .5px; }
+  header.top .tagline { margin: 6px 0 0; color: var(--muted); font-size: 13.5px; }
+  .issue { text-align: right; color: var(--muted); font-size: 13.5px; display: flex; align-items: center; gap: 14px; }
+  .issue strong { display: block; color: var(--text); font-size: 15px; font-weight: 600; }
+  .icon-btn { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); display: grid; place-items: center; font-size: 15px; }
+  .icon-btn:hover { background: var(--hover); }
+
+  .banner { margin: 0 0 12px; padding: 10px 14px; border: 1px solid var(--warn-line); background: var(--warn-bg); color: var(--warn-text); border-radius: 10px; font-size: 13.5px; }
+
+  /* ---------- 工具条 ---------- */
+  .toolbar { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 10px 0 10px; border-bottom: 1px solid var(--line); }
+  .controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); overflow: hidden; }
+  .seg button { padding: 5px 13px; font-size: 13.5px; font-weight: 400; color: var(--muted); border-right: 1px solid var(--line); }
+  .seg button:last-child { border-right: 0; }
+  .seg button:hover { background: var(--hover); }
+  .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .search { margin-left: auto; position: relative; flex: 0 1 240px; min-width: 150px; }
+  .search input {
+    width: 100%; padding: 6px 30px 6px 12px; font: inherit; font-size: 13.5px; color: var(--text);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  }
+  .search input::placeholder { color: var(--faint); }
+  .search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+  .search .clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; color: var(--faint); font-size: 15px; line-height: 1; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); font-size: 13.5px; color: var(--muted); white-space: nowrap; }
+  .chip:hover { background: var(--hover); }
+  .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+  .chip .n { font-size: 12px; color: var(--faint); font-weight: 400; }
+  .chip[aria-pressed="true"] .n { color: inherit; opacity: .75; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--faint)); flex: none; }
+
+  /* ---------- 内容 ---------- */
+  main { padding: 18px 0 8px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px 8px; }
+  .panel > h2 { margin: 0 0 4px; font-size: 16.5px; display: flex; align-items: center; gap: 8px; }
+  .panel > h2 .count { font-size: 12.5px; font-weight: 400; color: var(--faint); }
+  .panel > h2 .spacer { flex: 1; }
+  .panel > h2 .link { font-size: 12.5px; font-weight: 400; color: var(--muted); }
+  .panel > h2 .link:hover { color: var(--accent); }
+  .caption { margin: 0 0 6px; color: var(--faint); font-size: 12.5px; }
+
+  .headline-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 34px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; align-items: start; }
+
+  .item { padding: 11px 0 10px; border-top: 1px solid var(--line); min-width: 0; }
+  .item.first { border-top: 0; }
+  .headline-list .item:nth-child(-n+2) { border-top: 0; }
+  .item.ranked { display: grid; grid-template-columns: 30px 1fr; }
+  .item .rank { font-size: 19px; font-weight: 700; color: var(--accent); opacity: .85; line-height: 1.35; font-variant-numeric: tabular-nums; }
+  .item .body { min-width: 0; }
+  .item .title { display: inline; font-size: 15.5px; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+  .item .title:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+  .item .title:visited { color: var(--muted); }
+  .item .sum { margin: 3px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; }
+  .compact .item .sum { -webkit-line-clamp: 1; line-clamp: 1; }
+  .meta { margin-top: 4px; color: var(--faint); font-size: 12.5px; display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 2px; }
+  .meta .cat { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
+  .meta .multi { color: var(--accent); font-weight: 600; }
+  .meta .multi:hover { text-decoration: underline; }
+  .others { list-style: none; margin: 6px 0 2px; padding: 6px 0 6px 12px; border-left: 2px solid var(--line); font-size: 13px; }
+  .others li { padding: 2px 0; color: var(--faint); overflow-wrap: anywhere; }
+  .others a { color: var(--muted); }
+  .others a:hover { color: var(--accent); text-decoration: underline; }
+  .more-btn { display: block; width: 100%; margin: 2px 0 8px; padding: 8px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; text-align: center; }
+  .more-btn:hover { color: var(--accent); }
+  .empty { padding: 26px 0 30px; text-align: center; color: var(--faint); font-size: 14px; }
+  .list-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  footer { margin: 22px 0 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--faint); font-size: 12.5px; line-height: 1.8; }
+  footer details { margin-bottom: 8px; }
+  footer summary { cursor: pointer; color: var(--muted); }
+  footer .srcs { margin: 6px 0 0; }
+  footer .srcs a { color: var(--muted); white-space: nowrap; }
+  footer .srcs a:hover { color: var(--accent); }
+  footer .srcs .bad { color: #c2410c; }
+  footer .sep { margin: 0 6px; opacity: .6; }
+
+  @media (max-width: 900px) {
+    .headline-list, .grid { grid-template-columns: 1fr; }
+    .headline-list .item:nth-child(2) { border-top: 1px solid var(--line); }
+  }
+  @media (max-width: 640px) {
+    .wrap { padding: 0 14px; }
+    header.top { padding-top: 20px; }
+    header.top h1 { font-size: 23px; }
+    .issue { text-align: left; width: 100%; justify-content: space-between; }
+    .search { flex: 1 1 100%; margin-left: 0; }
+    .panel { padding: 14px 14px 6px; }
+    /* 手机上领域标签改为单行横向滑动，避免占掉半屏 */
+    .chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 1px; }
+    .chips::-webkit-scrollbar { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>科技前沿日报</h1>
+      <p class="tagline" id="tagline">每日梳理科技前沿进展与相关要闻</p>
+    </div>
+    <div class="issue">
+      <div><strong id="issue-date">&nbsp;</strong><span id="issue-updated"></span></div>
+      <button class="icon-btn" id="theme-btn" type="button" title="切换明暗主题" aria-label="切换明暗主题">◐</button>
+    </div>
+  </header>
+
+  <div id="banner"></div>
+
+  <div class="toolbar" id="toolbar" hidden>
+    <div class="controls">
+      <div class="seg" id="seg-range" role="group" aria-label="时间范围">
+        <button type="button" data-v="24">24 小时</button>
+        <button type="button" data-v="72">3 天</button>
+        <button type="button" data-v="168">7 天</button>
+      </div>
+      <div class="seg" id="seg-lang" role="group" aria-label="语言">
+        <button type="button" data-v="all">全部</button>
+        <button type="button" data-v="zh">中文</button>
+        <button type="button" data-v="en">英文</button>
+      </div>
+      <div class="search">
+        <input id="q" type="search" placeholder="搜索标题 / 摘要 / 来源" title="按 / 键可直接聚焦到搜索框" autocomplete="off" aria-label="搜索">
+        <button class="clear" id="q-clear" type="button" title="清空" aria-label="清空搜索" hidden>×</button>
+      </div>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="领域"></div>
+  </div>
+
+  <main id="main"></main>
+  <footer id="footer"></footer>
+</div>
+
+<script src="data/news.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var D = window.TF_DATA;
+  var $ = function (id) { return document.getElementById(id); };
+  // 双击 index.html 打开的是本地页面；否则是部署在网站上，给访客看的提示要换一套说法
+  var LOCAL = location.protocol === 'file:';
+
+  // 所有来自 RSS 的文字都只经过 textContent 写入页面，不会被当成 HTML 执行
+  function h(tag, props) {
+    var node = document.createElement(tag);
+    if (props) {
+      Object.keys(props).forEach(function (k) {
+        var v = props[k];
+        if (v == null || v === false) return;
+        if (k === 'class') node.className = v;
+        else if (k === 'text') node.textContent = v;
+        else if (k === 'style') node.setAttribute('style', v);
+        else if (k.slice(0, 2) === 'on') node.addEventListener(k.slice(2), v);
+        else node.setAttribute(k, v === true ? '' : v);
+      });
+    }
+    for (var i = 2; i < arguments.length; i++) {
+      var child = arguments[i];
+      if (child == null || child === false) continue;
+      node.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+    }
+    return node;
+  }
+  function safeLink(url) { return /^https?:\/\//i.test(url || '') ? url : null; }
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  // ---------- 主题 ----------
+  $('theme-btn').addEventListener('click', function () {
+    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('tf-theme', next); } catch (e) {}
+  });
+
+  if (!D || !Array.isArray(D.items)) {
+    $('main').appendChild(h('div', { class: 'panel' },
+      h('h2', { text: '还没有数据' }),
+      h('p', { class: 'empty', text: LOCAL
+        ? '请先双击同目录下的 update_now.bat（或在命令行运行 python update.py），生成 data/news.js 后刷新本页。'
+        : '数据还没有生成，请稍后再来。' })));
+    return;
+  }
+
+  // ---------- 数据准备 ----------
+  var genAt = Date.parse(D.generatedAt);
+  var CATS = D.categories;
+  var CAT_NAME = {};
+  CATS.forEach(function (c) { CAT_NAME[c.id] = c.name; });
+  var SRC = D.sources;
+  var HOUR = 3600e3, DAY = 86400e3;
+  var ITEMS = D.items.map(function (it) {
+    var ts = Date.parse(it.d);
+    var src = SRC[it.s] || { name: it.s, lang: 'en' };
+    return {
+      id: it.id, t: it.t, u: safeLink(it.u), s: it.s, c: it.c, x: it.x || '', n: it.n || 1, m: it.m || [],
+      ts: ts, src: src.name, lang: src.lang,
+      // 综合排序：重要度随时间缓慢衰减，每过一天减 0.25
+      rank: it.w - 0.25 * Math.max(0, genAt - ts) / DAY,
+      hay: (it.t + ' ' + (it.x || '') + ' ' + src.name).toLowerCase()
+    };
+  });
+
+  var state = { range: 24, lang: 'all', cat: 'all', q: '', sort: 'rank', limit: 30 };
+  try {
+    var saved = JSON.parse(localStorage.getItem('tf-state') || '{}');
+    if ([24, 72, 168].indexOf(saved.range) >= 0) state.range = saved.range;
+    if (['all', 'zh', 'en'].indexOf(saved.lang) >= 0) state.lang = saved.lang;
+  } catch (e) {}
+  function catFromHash() {
+    var id = decodeURIComponent(location.hash.replace(/^#/, ''));
+    return CAT_NAME[id] ? id : 'all';
+  }
+  state.cat = catFromHash();
+
+  function persist() {
+    try { localStorage.setItem('tf-state', JSON.stringify({ range: state.range, lang: state.lang })); } catch (e) {}
+  }
+
+  // ---------- 时间显示 ----------
+  function fullTime(ts) {
+    var d = new Date(ts);
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  function relTime(ts) {
+    var mins = Math.round((Date.now() - ts) / 60000);
+    if (mins < 2) return '刚刚';
+    if (mins < 60) return mins + ' 分钟前';
+    var hours = Math.round(mins / 60);
+    if (hours < 24) return hours + ' 小时前';
+    var d = new Date(ts);
+    return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  }
+
+  // ---------- 筛选 ----------
+  function inScope(it) {      // 时间范围 + 语言 + 搜索词（不含领域）
+    if (genAt - it.ts > state.range * HOUR) return false;
+    if (state.lang !== 'all' && it.lang !== state.lang) return false;
+    if (state.q) {
+      var terms = state.q.toLowerCase().split(/\s+/);
+      for (var i = 0; i < terms.length; i++) if (terms[i] && it.hay.indexOf(terms[i]) < 0) return false;
+    }
+    return true;
+  }
+  function byRank(a, b) { return b.rank - a.rank || b.ts - a.ts; }
+  function byTime(a, b) { return b.ts - a.ts; }
+
+  // ---------- 单条新闻 ----------
+  function itemNode(it, opt) {
+    opt = opt || {};
+    var title = h('a', { class: 'title', text: it.t, href: it.u, target: '_blank', rel: 'noopener noreferrer' });
+    var meta = h('div', { class: 'meta' });
+    if (opt.showCat) {
+      meta.appendChild(h('span', { class: 'cat' },
+        h('span', { class: 'dot', style: '--c: var(--c-' + it.c + ')' }), CAT_NAME[it.c] || it.c));
+    }
+    meta.appendChild(h('span', { text: it.src }));
+    meta.appendChild(h('time', { text: relTime(it.ts), title: fullTime(it.ts), datetime: new Date(it.ts).toISOString() }));
+    var others = null;
+    if (it.n > 1 && it.m.length) {
+      others = h('ul', { class: 'others', hidden: true });
+      it.m.forEach(function (o) {
+        others.appendChild(h('li', null,
+          h('a', { text: o.t, href: safeLink(o.u), target: '_blank', rel: 'noopener noreferrer' }),
+          ' — ' + ((SRC[o.s] || {}).name || o.s)));
+      });
+      var toggle = h('button', { class: 'multi', type: 'button', 'aria-expanded': 'false',
+        title: '查看其它来源对同一事件的报道', text: it.n + ' 家报道 ▾' });
+      toggle.addEventListener('click', function () {
+        var open = others.hidden;
+        others.hidden = !open;
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        toggle.textContent = it.n + ' 家报道 ' + (open ? '▴' : '▾');
+      });
+      meta.appendChild(toggle);
+    }
+    var body = h('div', { class: 'body' }, title,
+      it.x && opt.summary !== false ? h('p', { class: 'sum', text: it.x }) : null, meta, others);
+    if (opt.rank) {
+      return h('article', { class: 'item ranked' + (opt.first ? ' first' : '') },
+        h('div', { class: 'rank', text: String(opt.rank) }), body);
+    }
+    return h('article', { class: 'item' + (opt.first ? ' first' : '') }, body);
+  }
+
+  // ---------- 要闻：重要度最高的若干条，每个领域最多 2 条，保证覆盖面 ----------
+  function pickHeadlines(pool, total, perCat) {
+    var picked = [], used = {};
+    pool.slice().sort(byRank).some(function (it) {
+      if ((used[it.c] || 0) >= perCat) return false;
+      used[it.c] = (used[it.c] || 0) + 1;
+      picked.push(it);
+      return picked.length >= total;
+    });
+    return picked;
+  }
+
+  // ---------- 各视图 ----------
+  function rangeLabel() { return state.range === 24 ? '今日' : state.range === 72 ? '近 3 天' : '近 7 天'; }
+
+  function applyCat(id) {
+    state.cat = id;
+    state.limit = 30;
+    render();
+    window.scrollTo(0, 0);
+  }
+  // 领域写进地址栏的 # 里：浏览器“后退”能回到上一个视图，也方便把某个领域存成书签
+  function setCat(id) {
+    var want = id === 'all' ? '' : '#' + id;
+    if (location.hash === want) applyCat(id);
+    else location.hash = want;               // 触发 hashchange，由它来重绘
+  }
+
+  function renderOverview(main, pool) {
+    var heads = pickHeadlines(pool, 8, 2);
+    var top = h('section', { class: 'panel' },
+      h('h2', null, rangeLabel() + '要闻'),
+      h('p', { class: 'caption', text: '综合“多家报道、来源权重、是否为突破或首发”排序，每个领域最多 2 条' }));
+    var list = h('div', { class: 'headline-list' });
+    heads.forEach(function (it, i) { list.appendChild(itemNode(it, { rank: i + 1, showCat: true })); });
+    top.appendChild(heads.length ? list : h('p', { class: 'empty', text: '这个时间范围内暂时没有内容' }));
+    main.appendChild(top);
+
+    var grid = h('div', { class: 'grid compact' });
+    CATS.forEach(function (c) {
+      var all = pool.filter(function (it) { return it.c === c.id; }).sort(byRank);
+      if (!all.length) return;
+      var sec = h('section', { class: 'panel' });
+      var goto = function () { setCat(c.id); };
+      sec.appendChild(h('h2', null,
+        h('span', { class: 'dot', style: '--c: var(--c-' + c.id + ')' }), c.name,
+        h('span', { class: 'count', text: all.length + ' 条' }), h('span', { class: 'spacer' }),
+        all.length > 6 ? h('button', { class: 'link', type: 'button', text: '全部 →', onclick: goto }) : null));
+      all.slice(0, 6).forEach(function (it, i) { sec.appendChild(itemNode(it, { first: i === 0 })); });
+      grid.appendChild(sec);
+    });
+    main.appendChild(grid);
+  }
+
+  function renderList(main, pool, heading, showCat) {
+    var sorted = pool.slice().sort(state.sort === 'time' ? byTime : byRank);
+    var sec = h('section', { class: 'panel' });
+    var seg = h('div', { class: 'seg', role: 'group', 'aria-label': '排序' });
+    [['rank', '按重要度'], ['time', '按时间']].forEach(function (p) {
+      seg.appendChild(h('button', { type: 'button', text: p[1], 'aria-pressed': String(state.sort === p[0]),
+        onclick: function () { state.sort = p[0]; render(); } }));
+    });
+    sec.appendChild(h('h2', { class: 'list-head' }, heading,
+      h('span', { class: 'count', text: sorted.length + ' 条' }), h('span', { class: 'spacer' }), seg));
+    if (!sorted.length) {
+      sec.appendChild(h('p', { class: 'empty', text: state.q ? '没有找到匹配的内容，换个关键词或放宽时间范围试试' : '这个时间范围内暂时没有内容' }));
+    }
+    sorted.slice(0, state.limit).forEach(function (it, i) {
+      sec.appendChild(itemNode(it, { first: i === 0, showCat: showCat }));
+    });
+    if (sorted.length > state.limit) {
+      sec.appendChild(h('button', { class: 'more-btn', type: 'button',
+        text: '再显示 30 条（还有 ' + (sorted.length - state.limit) + ' 条）',
+        onclick: function () { state.limit += 30; render(); } }));
+    }
+    main.appendChild(sec);
+  }
+
+  function renderChips(pool) {
+    var counts = {};
+    pool.forEach(function (it) { counts[it.c] = (counts[it.c] || 0) + 1; });
+    var box = $('chips');
+    box.textContent = '';
+    box.appendChild(h('button', { class: 'chip', type: 'button', 'aria-pressed': String(state.cat === 'all'),
+      onclick: function () { setCat('all'); } }, '全部', h('span', { class: 'n', text: String(pool.length) })));
+    CATS.forEach(function (c) {
+      box.appendChild(h('button', { class: 'chip', type: 'button', 'aria-pressed': String(state.cat === c.id),
+        onclick: function () { setCat(c.id); } },
+        h('span', { class: 'dot', style: '--c: var(--c-' + c.id + ')' }), c.name,
+        h('span', { class: 'n', text: String(counts[c.id] || 0) })));
+    });
+  }
+
+  function syncSeg(id, value) {
+    Array.prototype.forEach.call($(id).querySelectorAll('button'), function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === String(value)));
+    });
+  }
+
+  function render() {
+    syncSeg('seg-range', state.range);
+    syncSeg('seg-lang', state.lang);
+    $('q-clear').hidden = !state.q;
+    var pool = ITEMS.filter(inScope);
+    renderChips(pool);
+    var main = $('main');
+    main.textContent = '';
+    if (state.cat !== 'all') {
+      renderList(main, pool.filter(function (it) { return it.c === state.cat; }),
+        h('span', { style: 'display:inline-flex;align-items:center;gap:8px' },
+          h('span', { class: 'dot', style: '--c: var(--c-' + state.cat + ')' }), CAT_NAME[state.cat]), false);
+    } else if (state.q) {
+      renderList(main, pool, '搜索结果', true);
+    } else {
+      renderOverview(main, pool);
+    }
+  }
+
+  // ---------- 页头、提示、页脚 ----------
+  function renderChrome() {
+    var d = new Date(genAt);
+    var week = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()];
+    $('issue-date').textContent = d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 星期' + week;
+    $('issue-updated').textContent = '更新于 ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    $('issue-updated').title = fullTime(genAt);
+
+    var ids = Object.keys(SRC);
+    var failed = ids.filter(function (k) { return !SRC[k].ok; });
+    $('tagline').textContent = '每日梳理科技前沿进展与相关要闻 · ' + CATS.length + ' 个领域 · ' + ids.length + ' 个来源';
+
+    var staleHours = (Date.now() - genAt) / HOUR;
+    if (staleHours > 30) {
+      var ago = staleHours >= 48 ? Math.floor(staleHours / 24) + ' 天' : Math.round(staleHours) + ' 小时';
+      $('banner').appendChild(h('div', { class: 'banner', role: 'status',
+        text: '当前内容是 ' + ago + '前（' + fullTime(genAt) + '）更新的，可能不是最新。' + (LOCAL
+          ? '双击同目录下的 update_now.bat 可立即更新；如果每天的自动更新一直没有运行，请检查 Windows 计划任务“TechFrontierDaily”。'
+          : '每天的自动更新可能没有按时运行。') }));
+    }
+
+    var footer = $('footer');
+    var srcBox = h('p', { class: 'srcs' });
+    ids.forEach(function (k, i) {
+      if (i) srcBox.appendChild(h('span', { class: 'sep', text: '·' }));
+      var s = SRC[k];
+      srcBox.appendChild(h('a', { href: safeLink(s.home), target: '_blank', rel: 'noopener noreferrer',
+        class: s.ok ? null : 'bad', title: s.ok ? null : '最近一次更新时抓取失败', text: s.name + (s.ok ? '' : '（本次失败）') }));
+    });
+    footer.appendChild(h('details', null,
+      h('summary', { text: '来源 ' + ids.length + ' 个' + (failed.length ? '，其中 ' + failed.length + ' 个最近一次抓取失败' : '，最近一次全部抓取成功') }),
+      srcBox));
+    footer.appendChild(h('div', { text: '本页只聚合各来源公开 RSS 中的标题与摘要并链接回原文，内容版权归原作者所有。领域划分、同一事件的合并与重要度排序均由关键词规则自动完成，可能存在误判。' }));
+    if (LOCAL) {
+      footer.appendChild(h('div', { text: '数据由同目录下的 update.py 生成；来源与关键词可在 config.py 中调整。' }));
+    }
+  }
+
+  // ---------- 事件 ----------
+  $('seg-range').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    state.range = Number(b.getAttribute('data-v')); state.limit = 30; persist(); render();
+  });
+  $('seg-lang').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    state.lang = b.getAttribute('data-v'); state.limit = 30; persist(); render();
+  });
+  var timer = null;
+  $('q').addEventListener('input', function () {
+    clearTimeout(timer);
+    var value = this.value.trim();
+    timer = setTimeout(function () { state.q = value; state.limit = 30; render(); }, 120);
+  });
+  $('q-clear').addEventListener('click', function () {
+    $('q').value = ''; state.q = ''; render(); $('q').focus();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === '/' && !e.ctrlKey && !e.metaKey && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) {
+      e.preventDefault(); $('q').focus();
+    } else if (e.key === 'Escape' && document.activeElement === $('q') && $('q').value) {
+      $('q').value = ''; state.q = ''; render();
+    }
+  });
+  window.addEventListener('hashchange', function () { applyCat(catFromHash()); });
+
+  $('toolbar').hidden = false;
+  renderChrome();
+  render();
+})();
+</script>
+</body>
+</html>

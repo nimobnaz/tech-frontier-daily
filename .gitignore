@@ -1,0 +1,7 @@
+# 运行时生成的文件，不进仓库：
+#   本地由 update.py 生成；云端由 GitHub Actions 生成（累积数据存放在 data 分支）
+data/
+logs/
+_site/
+__pycache__/
+*.pyc
