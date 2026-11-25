@@ -10,12 +10,16 @@
 #     所以仓库不会越来越大。删掉 data 分支只会丢失历史累积，下次运行会从头开始。
 #   - 改了 config.py / index.html 之后想立即生效：到 Actions 页手动 Run workflow；
 #     否则等下一次定时运行。
+#   - 某次运行失败后想补跑：同样到 Actions 页点 Run workflow，发起一次新的运行。
+#     不要点失败记录里的 “Re-run jobs”：据 actions/deploy-pages#451 里的报告，那样会再上传
+#     一份同名的站点文件，发布时会因为 “Multiple artifacts” 再次失败。
 
 name: Update and publish
 
 on:
   schedule:
-    # 23:17 UTC = 北京时间次日 07:17。GitHub 的定时触发常有几分钟到几十分钟的延迟，
+    # 23:17 UTC = 北京时间次日 07:17，这只是“最早”时间：GitHub 的定时触发会延迟，
+    # 本仓库 2026-11-16 至 11-25 的 10 次定时运行实际开始于北京时间 10:48–14:58。
     # 避开整点可以少排队。想改时间就改这一行（注意写的是 UTC）。
     - cron: "17 23 * * *"
   workflow_dispatch:
@@ -35,7 +39,8 @@ jobs:
     timeout-minutes: 20
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      # 发布最多尝试 4 次（见文件末尾），这里取其中成功的那一次给出的地址
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy_retry1.outputs.page_url || steps.deploy_retry2.outputs.page_url || steps.deploy_retry3.outputs.page_url }}
     steps:
       - name: Check out code
         uses: actions/checkout@v7
@@ -91,6 +96,46 @@ jobs:
         with:
           path: _site
 
+      # 刚上传的站点文件要过一会儿才能被发布步骤查到（GitHub 侧尚未修复的问题，见
+      # actions/deploy-pages#451）。紧接着发布，有时会报 No artifacts named "github-pages"：
+      # 本仓库 11-19、11-22、11-24、11-25 四次失败都是这个原因。该问题里别人实测，这段延迟
+      # 通常在 6 秒以内，有一次长达 46 秒。
+      # 所以先等 10 秒再发布；仍然失败就等更久再试，一共最多 4 次（上传后约 10 / 30 / 80 / 170 秒），
+      # 最后一次也失败，整个任务才算失败。查不到文件时发布还没有开始创建，所以重试是安全的。
+      - name: Wait for the uploaded site to become visible
+        run: sleep 10
+
       - name: Deploy to GitHub Pages
         id: deploy
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+
+      - name: Wait before retry 1
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 20
+
+      - name: Deploy to GitHub Pages (retry 1)
+        id: deploy_retry1
+        if: steps.deploy.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+
+      - name: Wait before retry 2
+        if: steps.deploy_retry1.outcome == 'failure'
+        run: sleep 45
+
+      - name: Deploy to GitHub Pages (retry 2)
+        id: deploy_retry2
+        if: steps.deploy_retry1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+
+      - name: Wait before retry 3
+        if: steps.deploy_retry2.outcome == 'failure'
+        run: sleep 90
+
+      # 最后一次不加 continue-on-error：4 次都失败时，任务才显示为失败
+      - name: Deploy to GitHub Pages (retry 3, last attempt)
+        id: deploy_retry3
+        if: steps.deploy_retry2.outcome == 'failure'
         uses: actions/deploy-pages@v5
